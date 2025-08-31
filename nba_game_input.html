@@ -1,0 +1,161 @@
+
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>NBA Game Input — Schedule Builder</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    :root { --bg:#0b0d12; --card:#141824; --muted:#8ca0b3; --text:#e6edf3; --accent:#6aa2ff; --border:#273142; }
+    * { box-sizing:border-box; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; }
+    body { margin:0; background:var(--bg); color:var(--text); }
+    header { padding:20px; border-bottom:1px solid var(--border); position:sticky; top:0; background:linear-gradient(180deg, rgba(11,13,18,0.98), rgba(11,13,18,0.90)); backdrop-filter: blur(6px); }
+    h1 { margin:0; font-size:20px; }
+    main { max-width:1000px; margin:20px auto; padding:0 16px; }
+    .card { background:var(--card); border:1px solid var(--border); border-radius:16px; padding:16px; margin-bottom:16px; }
+    label { font-size:12px; color:var(--muted); display:block; margin-bottom:6px; }
+    select, input[type="number"] { width:100%; padding:8px 10px; background:#0e121b; color:var(--text); border:1px solid var(--border); border-radius:10px; }
+    .row { display:grid; grid-template-columns:repeat(12,1fr); gap:12px; align-items:end; }
+    .col-3 { grid-column:span 3; } .col-2 { grid-column:span 2; } .col-4 { grid-column:span 4; } .col-6 { grid-column:span 6; }
+    button { border:1px solid var(--border); background:#0f1420; color:var(--text); padding:10px 14px; border-radius:12px; cursor:pointer; }
+    button.primary { background:var(--accent); color:#071633; border-color: transparent; font-weight:600; }
+    table { width:100%; border-collapse: collapse; }
+    th, td { padding:10px; border-bottom:1px solid var(--border); text-align:left; }
+    tfoot td { border-bottom:none; }
+    .muted { color:var(--muted); }
+  </style>
+</head>
+<body>
+<header>
+  <h1>NBA Schedule Builder <span class="muted">— add games & export CSV</span></h1>
+</header>
+<main>
+  <div class="card">
+    <div class="row">
+      <div class="col-4">
+        <label>Home Team</label>
+        <select id="homeTeam"></select>
+      </div>
+      <div class="col-4">
+        <label>Away Team</label>
+        <select id="awayTeam"></select>
+      </div>
+      <div class="col-2">
+        <label>Year</label>
+        <select id="year"></select>
+      </div>
+      <div class="col-1">
+        <label>Month</label>
+        <select id="month"></select>
+      </div>
+      <div class="col-1">
+        <label>Day</label>
+        <select id="day"></select>
+      </div>
+      <div class="col-2">
+        <button class="primary" id="addGame">+ Add Game</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <table id="gamesTable">
+      <thead>
+        <tr>
+          <th>gameId</th>
+          <th>gameDate</th>
+          <th>hometeamId</th>
+          <th>awayteamId</th>
+          <th>home</th>
+          <th>away</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+      <tfoot>
+        <tr>
+          <td colspan="7">
+            <button id="exportCsv" class="primary">Export CSV</button>
+            <span class="muted" style="margin-left:10px">Columns: gameId,gameDate,hometeamId,awayteamId</span>
+          </td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+</main>
+
+<script>
+const teams = [{"id": 1610612737, "city": "Atlanta", "name": "Hawks"}, {"id": 1610612738, "city": "Boston", "name": "Celtics"}, {"id": 1610612751, "city": "Brooklyn", "name": "Nets"}, {"id": 1610612766, "city": "Charlotte", "name": "Hornets"}, {"id": 1610612741, "city": "Chicago", "name": "Bulls"}, {"id": 1610612739, "city": "Cleveland", "name": "Cavaliers"}, {"id": 1610612742, "city": "Dallas", "name": "Mavericks"}, {"id": 1610612743, "city": "Denver", "name": "Nuggets"}, {"id": 1610612765, "city": "Detroit", "name": "Pistons"}, {"id": 1610612744, "city": "Golden State", "name": "Warriors"}, {"id": 1610612745, "city": "Houston", "name": "Rockets"}, {"id": 1610612754, "city": "Indiana", "name": "Pacers"}, {"id": 1610612746, "city": "LA", "name": "Clippers"}, {"id": 1610612747, "city": "Los Angeles", "name": "Lakers"}, {"id": 1610612763, "city": "Memphis", "name": "Grizzlies"}, {"id": 1610612748, "city": "Miami", "name": "Heat"}, {"id": 1610612749, "city": "Milwaukee", "name": "Bucks"}, {"id": 1610612750, "city": "Minnesota", "name": "Timberwolves"}, {"id": 1610612740, "city": "New Orleans", "name": "Pelicans"}, {"id": 1610612752, "city": "New York", "name": "Knicks"}, {"id": 1610612760, "city": "Oklahoma City", "name": "Thunder"}, {"id": 1610612753, "city": "Orlando", "name": "Magic"}, {"id": 1610612755, "city": "Philadelphia", "name": "76ers"}, {"id": 1610612756, "city": "Phoenix", "name": "Suns"}, {"id": 1610612757, "city": "Portland", "name": "Trail Blazers"}, {"id": 1610612758, "city": "Sacramento", "name": "Kings"}, {"id": 1610612759, "city": "San Antonio", "name": "Spurs"}, {"id": 1610612761, "city": "Toronto", "name": "Raptors"}, {"id": 1610612762, "city": "Utah", "name": "Jazz"}, {"id": 1610612764, "city": "Washington", "name": "Wizards"}];
+
+const homeSel = document.getElementById('homeTeam');
+const awaySel = document.getElementById('awayTeam');
+const yearSel = document.getElementById('year');
+const monthSel = document.getElementById('month');
+const daySel = document.getElementById('day');
+const addBtn = document.getElementById('addGame');
+const tbody = document.querySelector('#gamesTable tbody');
+const exportBtn = document.getElementById('exportCsv');
+
+function opt(text, value) { const o = document.createElement('option'); o.textContent = text; o.value = value; return o; }
+function teamLabel(t){ return t.city + ' ' + t.name; }
+teams.forEach(t => {
+  homeSel.appendChild(opt(teamLabel(t), t.id));
+  awaySel.appendChild(opt(teamLabel(t), t.id));
+});
+
+const now = new Date();
+for (let y = now.getFullYear()-1; y <= now.getFullYear()+2; y++) yearSel.appendChild(opt(String(y), y));
+for (let m = 1; m <= 12; m++) monthSel.appendChild(opt(String(m).padStart(2,'0'), m));
+for (let d = 1; d <= 31; d++) daySel.appendChild(opt(String(d).padStart(2,'0'), d));
+
+function genGameId(dateStr, homeId, awayId) {
+  const ymd = dateStr.replaceAll('-','');
+  return ymd + String(homeId).slice(-3) + String(awayId).slice(-3);
+}
+
+function addRow() {
+  const homeId = parseInt(homeSel.value, 10);
+  const awayId = parseInt(awaySel.value, 10);
+  const year = parseInt(yearSel.value, 10);
+  const month = parseInt(monthSel.value, 10);
+  const day = parseInt(daySel.value, 10);
+  if (homeId === awayId) { alert("Home and Away cannot be the same team."); return; }
+  const gameDate = `${year}-${String(month).padStart(2,'0')}-${String(day).padStart(2,'0')} 19:30:00`;
+  const gid = genGameId(gameDate.slice(0,10), homeId, awayId);
+  const tr = document.createElement('tr');
+  tr.innerHTML = `
+    <td>${gid}</td>
+    <td>${gameDate}</td>
+    <td>${homeId}</td>
+    <td>${awayId}</td>
+    <td>${teamLabel(teams.find(t=>t.id===homeId))}</td>
+    <td>${teamLabel(teams.find(t=>t.id===awayId))}</td>
+    <td><button onclick="this.closest('tr').remove()">Remove</button></td>
+  `;
+  tbody.appendChild(tr);
+}
+
+function toCsv() {
+  const rows = Array.from(tbody.querySelectorAll('tr'));
+  const header = ["gameId","gameDate","hometeamId","awayteamId"];
+  const data = [header.join(',')];
+  rows.forEach(r => {
+    const tds = r.querySelectorAll('td');
+    const gid = tds[0].textContent;
+    const gdt = tds[1].textContent;
+    const hid = tds[2].textContent;
+    const aid = tds[3].textContent;
+    data.push([gid, gdt, hid, aid].join(','));
+  });
+  const blob = new Blob([data.join('\n')], {type: "text/csv"});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = "custom_schedule.csv";
+  a.click();
+}
+
+addBtn.addEventListener('click', addRow);
+exportBtn.addEventListener('click', toCsv);
+</script>
+</body>
+</html>
